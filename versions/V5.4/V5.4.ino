@@ -1,9 +1,12 @@
+#include <Dabble.h>
 #include <Wire.h>
 #include <Arduino.h>
 #include "carrinhoFunc.h"
 
+#define CUSTOM_SETTINGS //Configuração para uso da aplicação para controle do LED
+#define INCLUDE_LEDCONTROL_MODULE
 #define sensorEsquerda 8
-#define sensorDireite 7
+#define sensorDireita 7
 #define sensorCentral 6
 
 // Ultrassônico HC-SR04
@@ -13,7 +16,7 @@
 // Distância mínima para considerar obstáculo
 #define DISTANCIA_MINIMA 25
 
-carrinhoFunc carro;
+carrinhoFunc northeastCar;
 
 int AnalogicoEsquerda = A0;
 int valorDigitalEsquerda;
@@ -43,13 +46,13 @@ void desvioObstaculo();
 
 void setup()
 {
-  carro.begin();
+  northeastCar.begin();
   Serial.begin(9600);
 
   pinMode(sensorEsquerda, INPUT);
   pinMode(AnalogicoEsquerda, INPUT);
 
-  pinMode(sensorDireite, INPUT);
+  pinMode(sensorDireita, INPUT);
   pinMode(AnalogicoDireita, INPUT);
 
   pinMode(sensorCentral, INPUT);
@@ -58,23 +61,40 @@ void setup()
   // Ultrassônico
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
+
+  Dabble.begin(9600); // Inicia a comunicação via Bluetooth com o Dabble
 }
 
 
 void loop()
 {
+  Dabble.processInput();
+
+/* -------------------- ARRUMA AQUI MAYKEL -------------------------
+  int valorLidoAnalogicoDireita = analogRead(AnalogicoDireita);
+
+  Terminal.print("Valor do Sensor IV: ");
+  Terminal.println(valor);
+
+  // Imprime também no monitor serial do PC para acompanhar
+  Serial.print("Sensor IV: ");
+  Serial.println(valorSensor);
+
+  delay(500);
+ ----------------------------------------------------------------*/
+ 
   // LEITURA DO ULTRASSÔNICO
   leituraSensorUltrassonico();
 
   Serial.print("Distancia: ");
   Serial.print(distance);
-  Serial.println(" cm");
+  Serial.println("cm");
 
   // VERIFICA OBSTÁCULO
   if (distance > 0 && distance <= DISTANCIA_MINIMA)
   {
     // Obstáculo encontrado
-    carro.Parar(100);
+    northeastCar.Parar(100);
     desvioObstaculo();
 
     Serial.println("OBSTACULO DETECTADO!");
@@ -86,14 +106,14 @@ void loop()
 
       Serial.print("Distancia: ");
       Serial.print(distance);
-      Serial.println(" cm");
+      Serial.println("cm");
 
       if (distance > DISTANCIA_MINIMA || distance <= 0)
       {
         break;
       }
 
-      carro.Parar(50);
+      northeastCar.Parar(50);
     }
 
     Serial.println("Caminho livre!");
@@ -107,73 +127,72 @@ void loop()
 
   Serial.print("\nDireita: ");
   Serial.println(valorAnalogicoDireita);
-
   delay(100);
 
   // LÓGICA DO SEGUE-LINHA
   if ((valorDigitalEsquerda == BRANCO) && (valorDigitalCentral == PRETO) && (valorDigitalDireita == BRANCO))
   {
-    carro.frente(100);
-    carro.Parar(0);
+    northeastCar.frente(100);
+    northeastCar.Parar(0);
     leituraSensorInfra();
   }
 
   else if ((valorDigitalEsquerda == BRANCO) && (valorDigitalCentral == BRANCO) && (valorDigitalDireita == PRETO))
   {
-    carro.Parar(500);
-    carro.correcaoEsquerda();
+    northeastCar.Parar(500);
+    northeastCar.correcaoEsquerda();
     leituraSensorInfra();
   }
 
   else if ((valorDigitalEsquerda == PRETO) && (valorDigitalCentral == BRANCO) && (valorDigitalDireita == BRANCO))
   {
-    carro.Parar(500);
-    carro.correcaoDireita();
+    northeastCar.Parar(500);
+    northeastCar.correcaoDireita();
     leituraSensorInfra();
   }
 
   else if ((valorDigitalEsquerda == BRANCO) && (valorDigitalCentral == BRANCO) && (valorDigitalDireita == BRANCO))
   {
-    carro.Parar(20);
-    carro.tresBrancos(20);
+    northeastCar.Parar(20);
+    northeastCar.tresBrancos(20);
     leituraSensorInfra();
   }
 
   else if ((valorDigitalEsquerda == PRETO) && (valorDigitalCentral == PRETO) && (valorDigitalDireita == BRANCO))
   {
-    carro.Parar(700);
-    carro.CurvaEsquerda();
+    northeastCar.Parar(700);
+    northeastCar.CurvaEsquerda();
   }
 
   else if ((valorDigitalEsquerda == BRANCO) && (valorDigitalCentral == PRETO) && (valorDigitalDireita == PRETO))
   {
     while ((valorDigitalEsquerda != BRANCO) && (valorDigitalCentral == PRETO))
     {
-      carro.CurvaDireita();
-      carro.Parar(200);
+      northeastCar.CurvaDireita();
+      northeastCar.Parar(200);
       leituraSensorInfra();
-      carro.Parar(200);
+      northeastCar.Parar(200);
     }
   }
 
   else if ((valorDigitalEsquerda == PRETO) && (valorDigitalCentral == PRETO) && (valorDigitalDireita == PRETO))
   {
-    carro.Parar(1000);
+    northeastCar.Parar(1000);
 
-    carro.frente(100);
+    northeastCar.frente(100);
 
-    carro.Parar(500);
+    northeastCar.Parar(500);
 
     leituraSensorInfra();
 
     if ((valorDigitalEsquerda == BRANCO) && (valorDigitalCentral == PRETO) && (valorDigitalDireita == BRANCO))
     {
-      carro.frente(450);
+      northeastCar.frente(450);
     }
 
     else if ((valorDigitalEsquerda == BRANCO) && (valorDigitalCentral == BRANCO) && (valorDigitalDireita == BRANCO))
     {
-      carro.curva180();
+      northeastCar.curva180();
     }
   }
 
@@ -192,7 +211,7 @@ void leituraSensorInfra()
 {
   valorDigitalEsquerda = digitalRead(sensorEsquerda);
   valorDigitalCentral = digitalRead(sensorCentral);
-  valorDigitalDireita = digitalRead(sensorDireite);
+  valorDigitalDireita = digitalRead(sensorDireita);
 
   valorAnalogicoEsquerda = analogRead(AnalogicoEsquerda);
   valorAnalogicoCentral = analogRead(AnalogicoCentral);
@@ -232,7 +251,7 @@ void desvioObstaculo()
 
   // 1. Gira aproximadamente 45 graus para a esquerda e mede.
   Serial.println("Verificando esquerda...");
-  carro.girarEsquerda45();
+  northeastCar.girarEsquerda45();
 
   leituraSensorUltrassonico();
   distanciaEsquerda = distance;
@@ -243,7 +262,7 @@ void desvioObstaculo()
   // 2. Da posicao a esquerda, gira 90 graus para a direita.
   // Agora o carrinho aponta aproximadamente 45 graus para a direita.
   Serial.println("Verificando direita...");
-  carro.girarDireita90();
+  northeastCar.girarDireita90();
 
   leituraSensorUltrassonico();
   distanciaDireita = distance;
@@ -256,13 +275,13 @@ void desvioObstaculo()
     Serial.println("Escolhendo esquerda");
 
     // Sai da orientacao de 45 graus a direita e vai para 45 graus a esquerda.
-    carro.girarEsquerda90();
+    northeastCar.girarEsquerda90();
   } else {
     Serial.println("Escolhendo direita");
     // Ja esta apontado aproximadamente 45 graus para a direita.
   }
 
   // 4. Avanca na direcao escolhida.
-  carro.frente(600);
-  carro.Parar(100);
+  northeastCar.frente(600);
+  northeastCar.Parar(100);
 }
